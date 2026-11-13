@@ -59,6 +59,10 @@ class RuleCondition(BaseModel):
         default=None,
         description="Descriptive failure message returned if condition evaluates to false."
     )
+    on_failure_status: Optional[DecisionStatus] = Field(
+        default=None,
+        description="Failure status override. Set to IN_REVIEW to flag for manual review rather than hard rejection."
+    )
 
     model_config = ConfigDict(
         use_enum_values=True,
@@ -86,6 +90,14 @@ class WorkflowStage(BaseModel):
     conditions: List[RuleCondition] = Field(
         default_factory=list,
         description="List of threshold rules that must all pass for the stage to succeed."
+    )
+    on_failure_status: DecisionStatus = Field(
+        default=DecisionStatus.REJECTED,
+        description="Default decision status assigned if this stage fails (REJECTED or IN_REVIEW)."
+    )
+    is_manual_review_stage: bool = Field(
+        default=False,
+        description="Flag indicating if this stage functions as a manual underwriting / review stage."
     )
 
     model_config = ConfigDict(

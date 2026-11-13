@@ -149,13 +149,29 @@ class WorkflowEngine:
         # -------------------------------------------------------------------
         executed_stages: List[StageExecutionResult] = []
         overall_passed = True
+        has_hard_rejection = False
+        has_manual_review = False
+        manual_review_reasons: List[str] = []
+        rejection_reasons: List[str] = []
         sorted_stages = sorted(config.stages, key=lambda s: s.order)
 
         for stage in sorted_stages:
+            stage_review_mode = (
+                stage.is_manual_review_stage
+                or stage.on_failure_status == DecisionStatus.IN_REVIEW
+            )
+
             failed_checks = self.evaluator.evaluate_mandatory_checks(
                 mandatory_checks=stage.mandatory_checks,
                 metadata=metadata
             )
+            if failed_checks:
+                if stage_review_mode:
+                    has_manual_review = True
+                    manual_review_reasons.extend([f"Check flagged for review: {c}" for c in failed_checks])
+                else:
+                    has_hard_rejection = True
+                    rejection_reasons.extend([f"Failed check: {c}" for c in failed_checks])
 
             failed_conditions: List[str] = []
             rules_audit: List[Dict[str, Any]] = []
@@ -167,6 +183,16 @@ class WorkflowEngine:
                 )
                 if not passed:
                     failed_conditions.append(err)
+                    cond_review_mode = (
+                        condition.on_failure_status == DecisionStatus.IN_REVIEW
+                        or (condition.on_failure_status is None and stage_review_mode)
+                    )
+                    if cond_review_mode:
+                        has_manual_review = True
+                        manual_review_reasons.append(err)
+                    else:
+                        has_hard_rejection = True
+                        rejection_reasons.append(err)
 
                 rules_audit.append({
                     "field": condition.field,
@@ -223,6 +249,12 @@ class WorkflowEngine:
         if overall_passed:
             status = DecisionStatus.APPROVED
             summary = "Application satisfies all mandatory checks and threshold conditions across all stages."
+        elif has_hard_rejection:
+            status = DecisionStatus.REJECTED
+            summary = "Application failed one or more mandatory verification checks or threshold conditions."
+        elif has_manual_review:
+            status = DecisionStatus.IN_REVIEW
+            summary = f"Application flagged for manual underwriter review: {'; '.join(manual_review_reasons)}"
         else:
             status = DecisionStatus.REJECTED
             summary = "Application failed one or more mandatory verification checks or threshold conditions."
