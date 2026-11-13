@@ -1,0 +1,74 @@
+{
+  "workflow_id": "loan_approval_workflow",
+  "workflow_name": "Retail Loan Decision Pipeline",
+  "version": "1.0.0",
+  "description": "Standard underwriting and eligibility evaluation workflow for retail personal loan applications.",
+  "stages": [
+    {
+      "stage_id": "stage_1_pre_qualification",
+      "stage_name": "Pre-Qualification & KYC",
+      "order": 1,
+      "description": "Validates applicant identity verification and minimum financial eligibility criteria.",
+      "mandatory_checks": [
+        "kyc_verified",
+        "citizenship_verified",
+        "blacklist_check_cleared"
+      ],
+      "conditions": [
+        {
+          "field": "credit_score",
+          "operator": ">=",
+          "value": 650,
+          "error_message": "Applicant credit score is below the mandatory pre-qualification threshold of 650."
+        },
+        {
+          "field": "income",
+          "operator": ">=",
+          "value": 50000.0,
+          "error_message": "Annual income must be at least $50,000 for standard retail loan processing."
+        }
+      ]
+    },
+    {
+      "stage_id": "stage_2_risk_underwriting",
+      "stage_name": "Risk & Exposure Underwriting",
+      "order": 2,
+      "description": "Evaluates loan requested amount limits against risk tolerance policies.",
+      "mandatory_checks": [
+        "employment_status_active"
+      ],
+      "conditions": [
+        {
+          "field": "amount_requested",
+          "operator": "<=",
+          "value": 500000.0,
+          "error_message": "Requested amount exceeds maximum single-ticket retail lending limit of $500,000."
+        },
+        {
+          "field": "amount_requested",
+          "operator": ">=",
+          "value": 1000.0,
+          "error_message": "Requested amount is below minimum loan borrowing threshold of $1,000."
+        }
+      ]
+    },
+    {
+      "stage_id": "stage_3_final_approval",
+      "stage_name": "Final Policy Decisioning",
+      "order": 3,
+      "description": "Final gate for credit policy decision before automated fund disbursement.",
+      "mandatory_checks": [
+        "compliance_signoff"
+      ],
+      "conditions": [
+        {
+          "field": "credit_score",
+          "operator": ">=",
+          "value": 680,
+          "error_message": "Automated final decision requires a credit score of 680 or higher."
+        }
+      ]
+    }
+  ]
+}
+
