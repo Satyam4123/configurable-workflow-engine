@@ -1,0 +1,67 @@
+{
+  "workflow_id": "insurance_claim_workflow",
+  "workflow_name": "Automated Insurance Claim Processing Pipeline",
+  "version": "1.0.0",
+  "description": "Automated adjudication, coverage verification, and fraud assessment workflow for retail insurance claims.",
+  "stages": [
+    {
+      "stage_id": "stage_1_coverage_validation",
+      "stage_name": "Policy & Coverage Active Verification",
+      "order": 1,
+      "description": "Validates active policy standing and minimum deductible thresholds.",
+      "mandatory_checks": [
+        "policy_active",
+        "premium_paid_up_to_date"
+      ],
+      "conditions": [
+        {
+          "field": "amount_requested",
+          "operator": ">=",
+          "value": 50.0,
+          "error_message": "Claim amount is below the minimum filing deductible threshold of $50."
+        },
+        {
+          "field": "amount_requested",
+          "operator": "<=",
+          "value": 200000.0,
+          "error_message": "Claim amount exceeds the policy maximum single-incident coverage ceiling of $200,000."
+        }
+      ]
+    },
+    {
+      "stage_id": "stage_2_fraud_risk_assessment",
+      "stage_name": "Fraud Risk Scoring & Documentation",
+      "order": 2,
+      "description": "Assesses incident documentation completeness and claimant risk indicators.",
+      "mandatory_checks": [
+        "incident_report_attached"
+      ],
+      "conditions": [
+        {
+          "field": "credit_score",
+          "operator": ">=",
+          "value": 580,
+          "error_message": "Claimant bureau risk score indicates elevated fraud vulnerability (score < 580)."
+        }
+      ]
+    },
+    {
+      "stage_id": "stage_3_adjudication_tier",
+      "stage_name": "Straight-Through Adjudication vs Adjuster Review",
+      "order": 3,
+      "description": "Determines whether claim qualifies for instant automated settlement or requires manual claims adjuster review.",
+      "is_manual_review_stage": false,
+      "mandatory_checks": [],
+      "conditions": [
+        {
+          "field": "amount_requested",
+          "operator": "<=",
+          "value": 25000.0,
+          "on_failure_status": "IN_REVIEW",
+          "error_message": "Claim amount exceeds the $25,000 automated straight-through payout limit; routed to senior claims adjuster for manual review."
+        }
+      ]
+    }
+  ]
+}
+
