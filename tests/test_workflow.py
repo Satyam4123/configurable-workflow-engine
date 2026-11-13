@@ -6,6 +6,7 @@ from fastapi.testclient import TestClient
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import StaticPool
 
 from core.engine import WorkflowEngine
 from core.evaluator import ConditionEvaluator
@@ -25,10 +26,11 @@ client = TestClient(app)
 
 @pytest.fixture(autouse=True)
 def setup_test_db():
-    """Sets up an isolated in-memory SQLite database for every test."""
+    """Sets up an isolated in-memory SQLite database using StaticPool for every test."""
     test_engine = create_engine(
         "sqlite:///:memory:",
-        connect_args={"check_same_thread": False}
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool
     )
     TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=test_engine)
     Base.metadata.create_all(bind=test_engine)
@@ -56,13 +58,18 @@ def test_load_workflow_sample_config() -> None:
 
 def test_condition_evaluator_comparisons() -> None:
     """Tests evaluator operator logic for numerical thresholds."""
-    cond = RuleCondition(field="credit_score", operator=ComparisonOperator.GREATER_THAN_OR_EQUAL, value=650)
+    cond = RuleCondition(
+        field="credit_score",
+        operator=ComparisonOperator.GREATER_THAN_OR_EQUAL,
+        value=650,
+        error_message="Credit score must be at least 650"
+    )
     passed, _ = ConditionEvaluator.evaluate_condition(cond, {"credit_score": 700})
     assert passed is True
 
     passed, err = ConditionEvaluator.evaluate_condition(cond, {"credit_score": 600})
     assert passed is False
-    assert "Credit score" in cond.error_message or "credit_score" in err
+    assert "Credit score" in err or "credit_score" in err
 
 
 def test_workflow_execution_approved() -> None:

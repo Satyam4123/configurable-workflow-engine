@@ -4,6 +4,7 @@ from fastapi.testclient import TestClient
 import pytest
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.pool import StaticPool
 
 from core.external_service import (
     ExternalServiceTimeoutError,
@@ -24,10 +25,11 @@ client = TestClient(app)
 
 @pytest.fixture(autouse=True)
 def setup_test_db():
-    """Sets up an isolated in-memory SQLite database for each robustness test."""
+    """Sets up an isolated in-memory SQLite database using StaticPool for each test."""
     test_engine = create_engine(
         "sqlite:///:memory:",
-        connect_args={"check_same_thread": False}
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool
     )
     TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=test_engine)
     Base.metadata.create_all(bind=test_engine)
@@ -60,7 +62,6 @@ def test_external_service_successful_first_try() -> None:
 
 def test_external_service_retries_transient_failure_then_succeeds() -> None:
     """Verifies that transient errors (e.g. 503) trigger exponential backoff retries and recover."""
-    # Configured to fail 2 times then succeed on the 3rd attempt
     service = MockCreditBureauClient(transient_failures_before_success=2)
     result = service.check_blacklist(application_id="APP-EXT-02", applicant_name="John Doe")
 
@@ -71,7 +72,6 @@ def test_external_service_retries_transient_failure_then_succeeds() -> None:
 
 def test_external_service_exhausts_retries_on_persistent_failure() -> None:
     """Verifies that persistent transient failures exhaust 3 retry attempts and raise exception."""
-    # Configured to fail 5 times, exceeding max 3 attempts
     service = MockCreditBureauClient(transient_failures_before_success=5)
     with pytest.raises(ExternalServiceTransientError):
         service.check_blacklist(application_id="APP-EXT-03", applicant_name="John Doe")
@@ -248,4 +248,3 @@ def test_get_execution_audit_endpoint_success_and_404() -> None:
     # Query non-existent ID
     res_404 = client.get("/workflow/execution/NON-EXISTENT-ID")
     assert res_404.status_code == 404
-
