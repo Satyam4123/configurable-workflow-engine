@@ -27,12 +27,15 @@ A configurable, declarative workflow decision platform in Python (FastAPI) capab
 ```text
 configurable-workflow-engine/
 ├── config/
-│   └── workflow_sample.json     # Sample multi-stage declarative workflow definition
+│   ├── claim_workflow.json      # Declarative insurance claim adjudication workflow
+│   └── workflow_sample.json     # Declarative retail loan approval workflow
 ├── core/
 │   ├── __init__.py
 │   ├── engine.py                # Pipeline execution engine with idempotency & audit persistence
 │   ├── evaluator.py             # Rule condition and mandatory check evaluator
 │   └── external_service.py      # Credit bureau & blacklist client with exponential retries
+├── docs/
+│   └── ARCHITECTURE.md          # Comprehensive architecture, data flow & trade-off defence doc
 ├── models/
 │   ├── __init__.py
 │   └── schemas.py               # Pydantic v2 schemas for intake, config, audit, and responses
@@ -43,6 +46,7 @@ configurable-workflow-engine/
 │   ├── __init__.py
 │   ├── test_health.py           # Health check endpoint unit tests
 │   ├── test_robustness.py       # Retries, idempotency, and audit logging test suite
+│   ├── test_rule_change.py      # Runtime rule changes & manual review routing tests
 │   └── test_workflow.py         # Workflow execution, validation, and stage rule tests
 ├── .gitignore
 ├── main.py                      # FastAPI application entrypoint with REST endpoints
@@ -123,7 +127,7 @@ Execute the full suite of unit, integration, and robustness tests with Pytest:
 pytest -v
 ```
 
-### Test Suite Execution Output (16 Passed)
+### Test Suite Execution Output (19 Passed)
 
 ```text
 ============================= test session starts =============================
@@ -131,26 +135,29 @@ platform win32 -- Python 3.11.9, pytest-8.1.1, pluggy-1.7.0 -- .venv\Scripts\pyt
 cachedir: .pytest_cache
 rootdir: D:\Clg\7th sem\scoreme\configurable-workflow-engine
 plugins: anyio-4.16.0
-collecting ... collected 16 items
+collecting ... collected 19 items
 
-tests/test_health.py::test_health_check_returns_200 PASSED               [  6%]
-tests/test_robustness.py::test_external_service_successful_first_try PASSED [ 12%]
-tests/test_robustness.py::test_external_service_retries_transient_failure_then_succeeds PASSED [ 18%]
-tests/test_robustness.py::test_external_service_exhausts_retries_on_persistent_failure PASSED [ 25%]
-tests/test_robustness.py::test_external_service_timeout_failure PASSED   [ 31%]
-tests/test_robustness.py::test_external_service_screening_blacklist_detection PASSED [ 37%]
-tests/test_robustness.py::test_idempotent_execution_returns_cached_decision_on_duplicate PASSED [ 43%]
-tests/test_robustness.py::test_duplicate_active_request_returns_conflict_409 PASSED [ 50%]
-tests/test_robustness.py::test_database_persistence_and_audit_trail_verification PASSED [ 56%]
-tests/test_robustness.py::test_get_execution_audit_endpoint_success_and_404 PASSED [ 62%]
-tests/test_workflow.py::test_load_workflow_sample_config PASSED          [ 68%]
-tests/test_workflow.py::test_condition_evaluator_comparisons PASSED      [ 75%]
-tests/test_workflow.py::test_workflow_execution_approved PASSED          [ 81%]
-tests/test_workflow.py::test_workflow_execution_rejected_on_credit_score PASSED [ 87%]
-tests/test_workflow.py::test_workflow_execution_rejected_on_missing_mandatory_check PASSED [ 93%]
+tests/test_health.py::test_health_check_returns_200 PASSED               [  5%]
+tests/test_robustness.py::test_external_service_successful_first_try PASSED [ 10%]
+tests/test_robustness.py::test_external_service_retries_transient_failure_then_succeeds PASSED [ 15%]
+tests/test_robustness.py::test_external_service_exhausts_retries_on_persistent_failure PASSED [ 21%]
+tests/test_robustness.py::test_external_service_timeout_failure PASSED   [ 26%]
+tests/test_robustness.py::test_external_service_screening_blacklist_detection PASSED [ 31%]
+tests/test_robustness.py::test_idempotent_execution_returns_cached_decision_on_duplicate PASSED [ 36%]
+tests/test_robustness.py::test_duplicate_active_request_returns_conflict_409 PASSED [ 42%]
+tests/test_robustness.py::test_database_persistence_and_audit_trail_verification PASSED [ 47%]
+tests/test_robustness.py::test_get_execution_audit_endpoint_success_and_404 PASSED [ 52%]
+tests/test_rule_change.py::test_rule_change_scenario_flips_decision_without_code_changes PASSED [ 57%]
+tests/test_rule_change.py::test_manual_review_stage_routing_on_borderline_claim PASSED [ 63%]
+tests/test_rule_change.py::test_multi_domain_claim_workflow_approved_flow PASSED [ 68%]
+tests/test_workflow.py::test_load_workflow_sample_config PASSED          [ 73%]
+tests/test_workflow.py::test_condition_evaluator_comparisons PASSED      [ 78%]
+tests/test_workflow.py::test_workflow_execution_approved PASSED          [ 84%]
+tests/test_workflow.py::test_workflow_execution_rejected_on_credit_score PASSED [ 89%]
+tests/test_workflow.py::test_workflow_execution_rejected_on_missing_mandatory_check PASSED [ 94%]
 tests/test_workflow.py::test_intake_request_validation_failure PASSED    [100%]
 
-======================== 16 passed, 1 warning in 2.56s ========================
+======================== 19 passed, 1 warning in 1.49s ========================
 ```
 
 ---
